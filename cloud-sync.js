@@ -39,13 +39,6 @@ async function run() {
     }
     const accessToken = tokenData.access_token;
 
-    console.log("Listing albums to find correct ID...");
-    const albumsRes = await fetch('https://photoslibrary.googleapis.com/v1/albums', {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-    const albumsData = await albumsRes.json();
-    console.log("Albums list:", JSON.stringify(albumsData.albums || [], null, 2));
-
     console.log("Uploading image bytes...");
     const uploadRes = await fetch('https://photoslibrary.googleapis.com/v1/uploads', {
         method: 'POST',
