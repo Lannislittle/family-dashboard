@@ -26,4 +26,4 @@ jobs:
           GPHOTOS_CLIENT_SECRET: ${{ secrets.GPHOTOS_CLIENT_SECRET }}
           GPHOTOS_REFRESH_TOKEN: ${{ secrets.GPHOTOS_REFRESH_TOKEN }}
           GPHOTOS_ALBUM_ID: ${{ secrets.GPHOTOS_ALBUM_ID }}
-        run: node cloud-sync.js
+        run: node family-dashboard/cloud-sync.js
