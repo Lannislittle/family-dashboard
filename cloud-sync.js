@@ -41,7 +41,7 @@ async function run() {
     }
     const accessToken = tokenData.access_token;
 
-    // Find or create an API-managed album named "Roku Family Dashboard"
+    // 1. Find or create the 'Roku Family Dashboard' album
     const albumsRes = await fetch('https://photoslibrary.googleapis.com/v1/albums', {
         headers: { 'Authorization': `Bearer ${accessToken}` }
     });
@@ -64,7 +64,21 @@ async function run() {
     const albumId = targetAlbum.id;
     console.log("Target Album ID:", albumId);
 
-    console.log("Uploading image bytes...");
+    // 2. Find existing photos in the album so we can remove them after uploading the fresh one
+    const searchRes = await fetch('https://photoslibrary.googleapis.com/v1/mediaItems:search', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ albumId: albumId, pageSize: 50 })
+    });
+    const searchData = await searchRes.json();
+    const oldMediaItemIds = (searchData.mediaItems || []).map(item => item.id);
+    console.log(`Found ${oldMediaItemIds.length} existing photo(s) in album.`);
+
+    // 3. Upload the new screenshot bytes
+    console.log("Uploading new image bytes...");
     const uploadRes = await fetch('https://photoslibrary.googleapis.com/v1/uploads', {
         method: 'POST',
         headers: {
@@ -81,7 +95,8 @@ async function run() {
         throw new Error("Failed to upload image bytes: " + uploadToken);
     }
 
-    console.log("Adding image to album...");
+    // 4. Add the new screenshot to the album
+    console.log("Adding new image to album...");
     const batchRes = await fetch('https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate', {
         method: 'POST',
         headers: {
@@ -92,7 +107,7 @@ async function run() {
             albumId: albumId,
             newMediaItems: [
                 {
-                    description: "Family Dashboard Auto Snapshot",
+                    description: `Family Dashboard Snapshot - ${new Date().toISOString()}`,
                     simpleMediaItem: {
                         uploadToken: uploadToken
                     }
@@ -106,7 +121,29 @@ async function run() {
         throw new Error("Failed to add media item to album: " + JSON.stringify(batchData));
     }
 
-    console.log("Success! Dashboard synced to API-managed album.");
+    // 5. Remove the old screenshot(s) from the album so only the newest one remains
+    if (oldMediaItemIds.length > 0) {
+        console.log("Removing old snapshot(s) from album...");
+        const removeUrl = `https://photoslibrary.googleapis.com/v1/albums/${albumId}:batchRemoveMediaItems`;
+        const removeRes = await fetch(removeUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                mediaItemIds: oldMediaItemIds
+            })
+        });
+        if (!removeRes.ok) {
+            const errText = await removeRes.text();
+            console.warn("Could not remove old items:", errText);
+        } else {
+            console.log("Old snapshot(s) removed cleanly!");
+        }
+    }
+
+    console.log("Success! Album updated with single fresh snapshot.");
 }
 
 run().catch(err => {
