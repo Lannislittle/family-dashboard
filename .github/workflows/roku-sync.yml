@@ -21,10 +21,10 @@ jobs:
         run: npm install puppeteer node-fetch
 
       - name: Run Cloud Sync
+        env:
+          GPHOTOS_CLIENT_ID: ${{ secrets.GPHOTOS_CLIENT_ID }}
+          GPHOTOS_CLIENT_SECRET: ${{ secrets.GPHOTOS_CLIENT_SECRET }}
+          GPHOTOS_REFRESH_TOKEN: ${{ secrets.GPHOTOS_REFRESH_TOKEN }}
+          GPHOTOS_ALBUM_ID: ${{ secrets.GPHOTOS_ALBUM_ID }}
+        run: node cloud-sync.js
         
-     env:
-       GPHOTOS_CLIENT_ID: ${{ secrets.GPHOTOS_CLIENT_ID }}
-       GPHOTOS_CLIENT_SECRET: ${{ secrets.GPHOTOS_CLIENT_SECRET }}
-       GPHOTOS_REFRESH_TOKEN: ${{ secrets.GPHOTOS_REFRESH_TOKEN }}
-       GPHOTOS_ALBUM_ID: ${{ secrets.GPHOTOS_ALBUM_ID }}
-     run: node cloud-sync.js
