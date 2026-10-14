@@ -10,7 +10,7 @@ async function run() {
     await page.setViewport({ width: 1920, height: 1080 });
 
     console.log("Navigating to Vercel dashboard...");
-    await page.goto('https://familydashboard-delta.vercel.app', { waitUntil: 'networkidle0', timeout: 60000 });
+    await page.goto('https://familydashboard-delta.vercel.app', { waitUntil: 'load', timeout: 60000 });
 
     console.log("Taking screenshot...");
     const screenshotBuffer = await page.screenshot({ type: 'jpeg', quality: 90 });
