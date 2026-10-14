@@ -10,7 +10,6 @@ async function run() {
     await page.setViewport({ width: 1920, height: 1080 });
 
     console.log("Navigating to Vercel dashboard...");
-    // Bypass waiting for network idle completely
     await page.goto('https://familydashboard-delta.vercel.app', { waitUntil: 'domcontentloaded', timeout: 30000 });
     
     console.log("Waiting 5 seconds for dashboard elements to settle...");
@@ -24,7 +23,6 @@ async function run() {
     const clientId = process.env.GPHOTOS_CLIENT_ID;
     const clientSecret = process.env.GPHOTOS_CLIENT_SECRET;
     const refreshToken = process.env.GPHOTOS_REFRESH_TOKEN;
-    const albumId = process.env.GPHOTOS_ALBUM_ID;
 
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -43,6 +41,29 @@ async function run() {
     }
     const accessToken = tokenData.access_token;
 
+    // Find or create an API-managed album named "Roku Family Dashboard"
+    const albumsRes = await fetch('https://photoslibrary.googleapis.com/v1/albums', {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    const albumsData = await albumsRes.json();
+    let targetAlbum = (albumsData.albums || []).find(a => a.title === "Roku Family Dashboard");
+
+    if (!targetAlbum) {
+        console.log("Creating 'Roku Family Dashboard' album...");
+        const createRes = await fetch('https://photoslibrary.googleapis.com/v1/albums', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ album: { title: "Roku Family Dashboard" } })
+        });
+        targetAlbum = await createRes.json();
+    }
+
+    const albumId = targetAlbum.id;
+    console.log("Target Album ID:", albumId);
+
     console.log("Uploading image bytes...");
     const uploadRes = await fetch('https://photoslibrary.googleapis.com/v1/uploads', {
         method: 'POST',
@@ -60,7 +81,7 @@ async function run() {
         throw new Error("Failed to upload image bytes: " + uploadToken);
     }
 
-    console.log("Adding image to album ID:", albumId);
+    console.log("Adding image to album...");
     const batchRes = await fetch('https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate', {
         method: 'POST',
         headers: {
@@ -85,7 +106,7 @@ async function run() {
         throw new Error("Failed to add media item to album: " + JSON.stringify(batchData));
     }
 
-    console.log("Success! Response:", JSON.stringify(batchData));
+    console.log("Success! Dashboard synced to API-managed album.");
 }
 
 run().catch(err => {
