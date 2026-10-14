@@ -23,6 +23,11 @@ async function run() {
     const clientId = process.env.GPHOTOS_CLIENT_ID;
     const clientSecret = process.env.GPHOTOS_CLIENT_SECRET;
     const refreshToken = process.env.GPHOTOS_REFRESH_TOKEN;
+    const albumId = process.env.GPHOTOS_ALBUM_ID;
+
+    if (!albumId) {
+        throw new Error("Missing GPHOTOS_ALBUM_ID secret in GitHub!");
+    }
 
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -41,30 +46,9 @@ async function run() {
     }
     const accessToken = tokenData.access_token;
 
-    // 1. Find or create the 'Roku Family Dashboard' album
-    const albumsRes = await fetch('https://photoslibrary.googleapis.com/v1/albums', {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-    const albumsData = await albumsRes.json();
-    let targetAlbum = (albumsData.albums || []).find(a => a.title === "Roku Family Dashboard");
+    console.log("Locked onto Permanent Album ID:", albumId);
 
-    if (!targetAlbum) {
-        console.log("Creating 'Roku Family Dashboard' album...");
-        const createRes = await fetch('https://photoslibrary.googleapis.com/v1/albums', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ album: { title: "Roku Family Dashboard" } })
-        });
-        targetAlbum = await createRes.json();
-    }
-
-    const albumId = targetAlbum.id;
-    console.log("Target Album ID:", albumId);
-
-    // 2. Find existing photos in the album so we can remove them after uploading the fresh one
+    // 1. Check for old photos inside this exact album so we can remove them
     const searchRes = await fetch('https://photoslibrary.googleapis.com/v1/mediaItems:search', {
         method: 'POST',
         headers: {
@@ -75,9 +59,9 @@ async function run() {
     });
     const searchData = await searchRes.json();
     const oldMediaItemIds = (searchData.mediaItems || []).map(item => item.id);
-    console.log(`Found ${oldMediaItemIds.length} existing photo(s) in album.`);
+    console.log(`Found ${oldMediaItemIds.length} old photo(s) in this album.`);
 
-    // 3. Upload the new screenshot bytes
+    // 2. Upload the brand-new screenshot bytes
     console.log("Uploading new image bytes...");
     const uploadRes = await fetch('https://photoslibrary.googleapis.com/v1/uploads', {
         method: 'POST',
@@ -95,7 +79,7 @@ async function run() {
         throw new Error("Failed to upload image bytes: " + uploadToken);
     }
 
-    // 4. Add the new screenshot to the album
+    // 3. Add the new screenshot into this exact album
     console.log("Adding new image to album...");
     const batchRes = await fetch('https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate', {
         method: 'POST',
@@ -121,7 +105,7 @@ async function run() {
         throw new Error("Failed to add media item to album: " + JSON.stringify(batchData));
     }
 
-    // 5. Remove the old screenshot(s) from the album so only the newest one remains
+    // 4. Remove the old screenshot(s) from this exact album so only 1 fresh photo stays
     if (oldMediaItemIds.length > 0) {
         console.log("Removing old snapshot(s) from album...");
         const removeUrl = `https://photoslibrary.googleapis.com/v1/albums/${albumId}:batchRemoveMediaItems`;
@@ -143,7 +127,7 @@ async function run() {
         }
     }
 
-    console.log("Success! Album updated with single fresh snapshot.");
+    console.log("Success! Single album updated without creating duplicates.");
 }
 
 run().catch(err => {
