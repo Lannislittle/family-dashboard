@@ -20,7 +20,7 @@ async function run() {
     const clientId = process.env.GPHOTOS_CLIENT_ID;
     const clientSecret = process.env.GPHOTOS_CLIENT_SECRET;
     const refreshToken = process.env.GPHOTOS_REFRESH_TOKEN;
-    const targetAlbumId = process.env.GPHOTOS_ALBUM_ID;
+    const albumId = process.env.GPHOTOS_ALBUM_ID;
 
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -39,12 +39,12 @@ async function run() {
     }
     const accessToken = tokenData.access_token;
 
-    // List albums to verify or find the correct ID if needed
+    console.log("Listing albums to find correct ID...");
     const albumsRes = await fetch('https://photoslibrary.googleapis.com/v1/albums', {
         headers: { 'Authorization': `Bearer ${accessToken}` }
     });
     const albumsData = await albumsRes.json();
-    console.log("Available Albums found in your account:", JSON.stringify(albumsData.albums || [], null, 2));
+    console.log("Albums list:", JSON.stringify(albumsData.albums || [], null, 2));
 
     console.log("Uploading image bytes...");
     const uploadRes = await fetch('https://photoslibrary.googleapis.com/v1/uploads', {
@@ -63,7 +63,7 @@ async function run() {
         throw new Error("Failed to upload image bytes: " + uploadToken);
     }
 
-    console.log("Adding image to album ID:", targetAlbumId);
+    console.log("Adding image to album ID:", albumId);
     const batchRes = await fetch('https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate', {
         method: 'POST',
         headers: {
@@ -71,7 +71,7 @@ async function run() {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            albumId: targetAlbumId,
+            albumId: albumId,
             newMediaItems: [
                 {
                     description: "Family Dashboard Auto Snapshot",
