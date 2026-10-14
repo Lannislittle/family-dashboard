@@ -1,6 +1,5 @@
 import puppeteer from 'puppeteer';
 import fetch from 'node-fetch';
-import { GoogleAuth } from 'google-auth-library';
 
 async function run() {
     console.log("Launching browser...");
@@ -23,7 +22,6 @@ async function run() {
     const refreshToken = process.env.GPHOTOS_REFRESH_TOKEN;
     const albumId = process.env.GPHOTOS_ALBUM_ID;
 
-    // Get Access Token using Refresh Token
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
